@@ -50,7 +50,6 @@ import java.util.Date;
  * tx power.  It then uses the measured RSSI and calibrated tx power to do a rough
  * distance measurement (the accuracy field) and group it into a more reliable buckets of
  * distance (the proximity field.)
- *
  */
 public class IBeacon {
     /**
@@ -90,10 +89,10 @@ public class IBeacon {
      * An integer with four possible values representing a general idea of how far the iBeacon
      * is away
      *
-     * @see #PROXIMITY_IMMEDIATE
-     * @see #PROXIMITY_NEAR
-     * @see #PROXIMITY_FAR
-     * @see #PROXIMITY_UNKNOWN
+     * @see #PROXIMITY_IMMEDIATE #PROXIMITY_IMMEDIATE
+     * @see #PROXIMITY_NEAR #PROXIMITY_NEAR
+     * @see #PROXIMITY_FAR #PROXIMITY_FAR
+     * @see #PROXIMITY_UNKNOWN #PROXIMITY_UNKNOWN
      */
     protected Integer proximity;
     /**
@@ -123,12 +122,33 @@ public class IBeacon {
      * If multiple RSSI samples were available, this is the running average
      */
     protected Double runningAverageRssi = null;
+    /**
+     * The Ble data payload.
+     */
     protected String bleDataPayload = "";
+    /**
+     * The Timezone string.
+     */
     protected String timezoneString = "";
+    /**
+     * The Time stamp.
+     */
+    protected long timeStamp;
 
     /**
-     * @return accuracy
-     * @see #accuracy
+     * Gets time stamp.
+     *
+     * @return the time stamp
+     */
+    public long getTimeStamp() {
+        return timeStamp;
+    }
+
+    /**
+     * Gets accuracy.
+     *
+     * @return accuracy accuracy
+     * @see #accuracy #accuracy
      */
     public double getAccuracy() {
         if (accuracy == null) {
@@ -142,24 +162,30 @@ public class IBeacon {
     }
 
     /**
-     * @return major
-     * @see #major
+     * Gets major.
+     *
+     * @return major major
+     * @see #major #major
      */
     public int getMajor() {
         return major;
     }
 
     /**
-     * @return minor
-     * @see #minor
+     * Gets minor.
+     *
+     * @return minor minor
+     * @see #minor #minor
      */
     public int getMinor() {
         return minor;
     }
 
     /**
-     * @return proximity
-     * @see #proximity
+     * Gets proximity.
+     *
+     * @return proximity proximity
+     * @see #proximity #proximity
      */
     public int getProximity() {
         if (proximity == null) {
@@ -169,48 +195,76 @@ public class IBeacon {
     }
 
     /**
-     * @return rssi
-     * @see #rssi
+     * Gets rssi.
+     *
+     * @return rssi rssi
+     * @see #rssi #rssi
      */
     public int getRssi() {
         return rssi;
     }
 
+    /**
+     * Sets rssi.
+     *
+     * @param rssi the rssi
+     */
     public void setRssi(int rssi) {
         this.rssi = rssi;
     }
 
+    /**
+     * Sets accuracy.
+     *
+     * @param accuracy the accuracy
+     */
     public void setAccuracy(Double accuracy) {
         this.accuracy = accuracy;
     }
 
+    /**
+     * Sets proximity uuid.
+     *
+     * @param proximityUuid the proximity uuid
+     */
     public void setProximityUuid(String proximityUuid) {
         this.proximityUuid = proximityUuid;
     }
 
+    /**
+     * Sets ble data payload.
+     *
+     * @param bleDataPayload the ble data payload
+     */
     public void setBleDataPayload(String bleDataPayload) {
         this.bleDataPayload = bleDataPayload;
     }
 
     /**
-     * @return txPowwer
-     * @see #txPower
+     * Gets tx power.
+     *
+     * @return txPowwer tx power
+     * @see #txPower #txPower
      */
     public int getTxPower() {
         return txPower;
     }
 
     /**
-     * @return proximityUuid
-     * @see #proximityUuid
+     * Gets proximity uuid.
+     *
+     * @return proximityUuid proximity uuid
+     * @see #proximityUuid #proximityUuid
      */
     public String getProximityUuid() {
         return proximityUuid;
     }
 
     /**
-     * @return bluetoothAddress
-     * @see #bluetoothAddress
+     * Gets bluetooth address.
+     *
+     * @return bluetoothAddress bluetooth address
+     * @see #bluetoothAddress #bluetoothAddress
      */
     public String getBluetoothAddress() {
         return bluetoothAddress;
@@ -223,10 +277,20 @@ public class IBeacon {
     }
 
 
+    /**
+     * Gets timezone string.
+     *
+     * @return the timezone string
+     */
     public String getTimezoneString() {
         return timezoneString;
     }
 
+    /**
+     * Sets timezone string.
+     *
+     * @param timezoneString the timezone string
+     */
     public void setTimezoneString(String timezoneString) {
         this.timezoneString = timezoneString;
     }
@@ -348,9 +412,15 @@ public class IBeacon {
         iBeacon.txPower = -55;
         iBeacon.bleDataPayload = getPayloadData(scanData);
         iBeacon.timezoneString = getDateCurrentTimeZone();
+        iBeacon.timeStamp = new Date().getTime();
         return iBeacon;
     }
 
+    /**
+     * Gets ble data payload.
+     *
+     * @return the ble data payload
+     */
     public String getBleDataPayload() {
         return bleDataPayload;
     }
@@ -386,6 +456,11 @@ public class IBeacon {
         return text.trim();
     }
 
+    /**
+     * Instantiates a new Beacon.
+     *
+     * @param otherIBeacon the other i beacon
+     */
     protected IBeacon(IBeacon otherIBeacon) {
         this.major = otherIBeacon.major;
         this.minor = otherIBeacon.minor;
@@ -398,11 +473,19 @@ public class IBeacon {
         this.bluetoothAddress = otherIBeacon.bluetoothAddress;
     }
 
+    /**
+     * Instantiates a new Beacon.
+     */
     protected IBeacon() {
 
     }
 
 
+    /**
+     * Gets date current time zone.
+     *
+     * @return the date current time zone
+     */
     public static String getDateCurrentTimeZone() {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -413,6 +496,13 @@ public class IBeacon {
         return "";
     }
 
+    /**
+     * Calculate accuracy double.
+     *
+     * @param txPower the tx power
+     * @param rssi    the rssi
+     * @return the double
+     */
     protected static double calculateAccuracy(int txPower, double rssi) {
         if (rssi == 0) {
             return -1.0; // if we cannot determine accuracy, return -1.
@@ -428,6 +518,12 @@ public class IBeacon {
         }
     }
 
+    /**
+     * Calculate proximity int.
+     *
+     * @param accuracy the accuracy
+     * @return the int
+     */
     protected static int calculateProximity(double accuracy) {
         if (accuracy < 0) {
             return PROXIMITY_UNKNOWN;

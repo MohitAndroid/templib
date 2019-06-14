@@ -7,8 +7,10 @@ import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.text.TextUtils;
 
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -225,14 +227,30 @@ public class BeaconHelper<T> {
                         if (isAdd) {
                             iBeacons.add(iBeacon);
                         }
+                        deleteUnusedIBeacons();
                         setRefreshDataForIBeacon();
                     } catch (Exception e) {
                         displayBeaconError(e.getMessage());
                     }
                 }
 
+                private void deleteUnusedIBeacons() {
+                    List<IBeacon> tempResult = new ArrayList<>(iBeacons);
+                    Timestamp currentTimestamp = new Timestamp
+                            (new Date().getTime());
+                    for (int i = 0; i < tempResult.size(); i++) {
+                        Timestamp beaconLastUpdatedTimestamp = new Timestamp
+                                (tempResult.get(i).getTimeStamp());
+                        long milliseconds = currentTimestamp.getTime() -
+                                beaconLastUpdatedTimestamp.getTime();
+                        int seconds = (int) milliseconds / 1000;
+                        if (seconds >= 10) {
+                            iBeacons.remove(tempResult.get(i));
+                        }
+                    }
+                }
+
                 private void setRefreshDataForIBeacon() {
-                    refreshIBeacons = null;
                     refreshIBeacons = new ArrayList<>(iBeacons);
                 }
 
@@ -259,6 +277,7 @@ public class BeaconHelper<T> {
                             filterBeaconData(iBeacon);
                             entity.setResult(filteredData);
                         }
+                        deleteUnusedBeacons();
                         sortBeaconData();
                         setNewKeys();
                         setRefreshData();
@@ -267,8 +286,23 @@ public class BeaconHelper<T> {
                     }
                 }
 
+                private void deleteUnusedBeacons() {
+                    List<BeaconResultEntity> tempResult = new ArrayList<>(beaconResultEntities);
+                    Timestamp currentTimestamp = new Timestamp
+                            (new Date().getTime());
+                    for (int i = 0; i < tempResult.size(); i++) {
+                        Timestamp beaconLastUpdatedTimestamp = new Timestamp
+                                (tempResult.get(i).getBeaconDetail().getTimeStamp());
+                        long milliseconds = currentTimestamp.getTime() -
+                                beaconLastUpdatedTimestamp.getTime();
+                        int seconds = (int) milliseconds / 1000;
+                        if (seconds >= 10) {
+                            beaconResultEntities.remove(tempResult.get(i));
+                        }
+                    }
+                }
+
                 private void setRefreshData() {
-                    beaconRefreshResultEntities = null;
                     beaconRefreshResultEntities = new ArrayList<>(beaconResultEntities);
                 }
 
