@@ -36,6 +36,7 @@ public class BeaconHelper<T> {
     private Activity context;
     private BluetoothManager bluetoothManager;
     private List<BeaconResultEntity> beaconResultEntities;
+    private List<BeaconResultEntity> beaconRefreshResultEntities;
     private BeaconKeySerializer beaconKeySerializer;
     private List<T> data;
     private List<T> filteredData;
@@ -47,6 +48,7 @@ public class BeaconHelper<T> {
     private Timer timer;
     private boolean isOnlyBeaconStuff;
     private List<IBeacon> iBeacons;
+    private List<IBeacon> refreshIBeacons;
 
     /**
      * Provide BeaconHelper instance.
@@ -108,11 +110,12 @@ public class BeaconHelper<T> {
                 @Override
                 public void run() {
                     context.runOnUiThread(() -> {
-                        if (beaconResultEntities != null
-                                && !beaconResultEntities.isEmpty() &&
+                        if (beaconRefreshResultEntities != null
+                                && !beaconRefreshResultEntities.isEmpty() &&
                                 isDifferent(oldKeys, newKeys)) {
                             setOldKeys();
-                            BeaconHelper.this.beaconResultListener.onResult(beaconResultEntities);
+                            BeaconHelper.this.beaconResultListener.
+                                    onResult(beaconRefreshResultEntities);
                         }
                     });
                 }
@@ -146,9 +149,9 @@ public class BeaconHelper<T> {
             timer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
-                    if (iBeacons != null
-                            && !iBeacons.isEmpty()) {
-                        BeaconHelper.this.beaconListener.onResult(iBeacons);
+                    if (refreshIBeacons != null
+                            && !refreshIBeacons.isEmpty()) {
+                        BeaconHelper.this.beaconListener.onResult(refreshIBeacons);
                     }
                 }
             }, 0, timeInterval);
@@ -222,9 +225,15 @@ public class BeaconHelper<T> {
                         if (isAdd) {
                             iBeacons.add(iBeacon);
                         }
+                        setRefreshDataForIBeacon();
                     } catch (Exception e) {
                         displayBeaconError(e.getMessage());
                     }
+                }
+
+                private void setRefreshDataForIBeacon() {
+                    refreshIBeacons = null;
+                    refreshIBeacons = new ArrayList<>(iBeacons);
                 }
 
                 private void getBeaconFilteredData(IBeacon iBeacon) {
@@ -252,9 +261,15 @@ public class BeaconHelper<T> {
                         }
                         sortBeaconData();
                         setNewKeys();
+                        setRefreshData();
                     } catch (Exception e) {
                         displayError(e.getMessage());
                     }
+                }
+
+                private void setRefreshData() {
+                    beaconRefreshResultEntities = null;
+                    beaconRefreshResultEntities = new ArrayList<>(beaconResultEntities);
                 }
 
                 private void setNewKeys() {
