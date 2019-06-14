@@ -244,6 +244,7 @@ public class BeaconHelper<T> {
                         long milliseconds = currentTimestamp.getTime() -
                                 beaconLastUpdatedTimestamp.getTime();
                         int seconds = (int) milliseconds / 1000;
+                        seconds = (seconds % 3600) % 60;
                         if (seconds >= 10) {
                             iBeacons.remove(tempResult.get(i));
                         }
@@ -296,6 +297,7 @@ public class BeaconHelper<T> {
                         long milliseconds = currentTimestamp.getTime() -
                                 beaconLastUpdatedTimestamp.getTime();
                         int seconds = (int) milliseconds / 1000;
+                        seconds = (seconds % 3600) % 60;
                         if (seconds >= 10) {
                             beaconResultEntities.remove(tempResult.get(i));
                         }
