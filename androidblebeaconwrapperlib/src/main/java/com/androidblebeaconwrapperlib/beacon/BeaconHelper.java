@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -47,10 +48,11 @@ public class BeaconHelper<T> {
     private List<DifferentBeaconEntity> newKeys;
     private BeaconResultListener beaconResultListener;
     private BeaconListener beaconListener;
-    private Timer timer;
+    private Timer timer, deleteBeaconTimer;
     private boolean isOnlyBeaconStuff;
     private List<IBeacon> iBeacons;
     private List<IBeacon> refreshIBeacons;
+    private boolean isDeleteOperationGoing = false;
 
     /**
      * Provide BeaconHelper instance.
@@ -73,8 +75,23 @@ public class BeaconHelper<T> {
         oldKeys = new ArrayList<>();
         newKeys = new ArrayList<>();
         iBeacons = new ArrayList<>();
-        timer = new Timer();
+        timer = deleteBeaconTimer = new Timer();
         isOnlyBeaconStuff = false;
+        startDeleteBeaconTimer();
+    }
+
+    private void startDeleteBeaconTimer() {
+        deleteBeaconTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                Log.d("TTAAGG", "++++++++++++DELETE START++++++++++++");
+                isDeleteOperationGoing = true;
+                deleteUnusedBeacons();
+                deleteUnusedIBeacons();
+                isDeleteOperationGoing = false;
+                Log.d("TTAAGG", "++++++++++++DELETE END++++++++++++");
+            }
+        }, 0, 5000);
     }
 
     /**
@@ -112,8 +129,7 @@ public class BeaconHelper<T> {
                 @Override
                 public void run() {
                     context.runOnUiThread(() -> {
-                        if (beaconRefreshResultEntities != null
-                                && !beaconRefreshResultEntities.isEmpty() &&
+                        if (beaconRefreshResultEntities != null &&
                                 isDifferent(oldKeys, newKeys)) {
                             setOldKeys();
                             BeaconHelper.this.beaconResultListener.
@@ -151,8 +167,7 @@ public class BeaconHelper<T> {
             timer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
-                    if (refreshIBeacons != null
-                            && !refreshIBeacons.isEmpty()) {
+                    if (refreshIBeacons != null) {
                         BeaconHelper.this.beaconListener.onResult(refreshIBeacons);
                     }
                 }
@@ -194,13 +209,58 @@ public class BeaconHelper<T> {
 
     }
 
+    private void deleteUnusedBeacons() {
+        if (beaconResultEntities != null && !beaconResultEntities.isEmpty()) {
+            List<BeaconResultEntity> tempResult = new ArrayList<>(beaconResultEntities);
+            Timestamp currentTimestamp = new Timestamp
+                    (new Date().getTime());
+            for (int i = 0; i < tempResult.size(); i++) {
+                Timestamp beaconLastUpdatedTimestamp = new Timestamp
+                        (tempResult.get(i).getBeaconDetail().getTimeStamp());
+                long milliseconds = currentTimestamp.getTime() -
+                        beaconLastUpdatedTimestamp.getTime();
+                int seconds = (int) milliseconds / 1000;
+                seconds = (seconds % 3600) % 60;
+                Log.d("TTAAGG", "Seconds of( " + tempResult.get(i).getKey() + " ): " + seconds);
+                if (seconds >= 10) {
+                    beaconResultEntities.remove(tempResult.get(i));
+                }
+            }
+            if (beaconResultEntities.isEmpty()) {
+                setNewKeys();
+                setRefreshData();
+            }
+        }
+    }
+
+    private void deleteUnusedIBeacons() {
+        List<IBeacon> tempResult = new ArrayList<>(iBeacons);
+        Timestamp currentTimestamp = new Timestamp
+                (new Date().getTime());
+        for (int i = 0; i < tempResult.size(); i++) {
+            Timestamp beaconLastUpdatedTimestamp = new Timestamp
+                    (tempResult.get(i).getTimeStamp());
+            long milliseconds = currentTimestamp.getTime() -
+                    beaconLastUpdatedTimestamp.getTime();
+            int seconds = (int) milliseconds / 1000;
+            seconds = (seconds % 3600) % 60;
+            if (seconds >= 10) {
+                iBeacons.remove(tempResult.get(i));
+            }
+        }
+        if (iBeacons.isEmpty()) {
+            setRefreshDataForIBeacon();
+        }
+    }
+
     private BluetoothAdapter.LeScanCallback mLeScanCallback =
             new BluetoothAdapter.LeScanCallback() {
                 @Override
                 public void onLeScan(final BluetoothDevice device, final int rssi,
                                      final byte[] scanRecord) {
                     IBeacon iBeacon = IBeacon.fromScanData(scanRecord, rssi, device);
-                    if (iBeacon != null) {
+                    if (iBeacon != null && !isDeleteOperationGoing) {
+                        Log.d("TTAAGG", "*************CALLED*************");
                         if (isOnlyBeaconStuff) {
                             getOnlyBeaconData(iBeacon);
                         } else {
@@ -227,42 +287,22 @@ public class BeaconHelper<T> {
                         if (isAdd) {
                             iBeacons.add(iBeacon);
                         }
-                        deleteUnusedIBeacons();
                         setRefreshDataForIBeacon();
                     } catch (Exception e) {
                         displayBeaconError(e.getMessage());
                     }
                 }
 
-                private void deleteUnusedIBeacons() {
-                    List<IBeacon> tempResult = new ArrayList<>(iBeacons);
-                    Timestamp currentTimestamp = new Timestamp
-                            (new Date().getTime());
-                    for (int i = 0; i < tempResult.size(); i++) {
-                        Timestamp beaconLastUpdatedTimestamp = new Timestamp
-                                (tempResult.get(i).getTimeStamp());
-                        long milliseconds = currentTimestamp.getTime() -
-                                beaconLastUpdatedTimestamp.getTime();
-                        int seconds = (int) milliseconds / 1000;
-                        seconds = (seconds % 3600) % 60;
-                        if (seconds >= 10) {
-                            iBeacons.remove(tempResult.get(i));
-                        }
-                    }
-                }
-
-                private void setRefreshDataForIBeacon() {
-                    refreshIBeacons = new ArrayList<>(iBeacons);
-                }
 
                 private void getBeaconFilteredData(IBeacon iBeacon) {
                     try {
                         if (data == null) {
                             throw new BeaconKeySerializeException("List can not be null");
                         }
-                        if (!dataMap.containsKey(iBeacon.getBleDataPayload())) {
+                        if (!isStringTypeData() && !dataMap.containsKey(iBeacon.getBleDataPayload())) {
                             throw new BeaconKeySerializeException("Key(Payload) not found in data");
                         }
+
                         BeaconResultEntity entity = isPresentInBeaconPagerEntities(iBeacon.
                                 getBluetoothAddress());
                         if (entity == null) {
@@ -278,7 +318,6 @@ public class BeaconHelper<T> {
                             filterBeaconData(iBeacon);
                             entity.setResult(filteredData);
                         }
-                        deleteUnusedBeacons();
                         sortBeaconData();
                         setNewKeys();
                         setRefreshData();
@@ -287,37 +326,6 @@ public class BeaconHelper<T> {
                     }
                 }
 
-                private void deleteUnusedBeacons() {
-                    List<BeaconResultEntity> tempResult = new ArrayList<>(beaconResultEntities);
-                    Timestamp currentTimestamp = new Timestamp
-                            (new Date().getTime());
-                    for (int i = 0; i < tempResult.size(); i++) {
-                        Timestamp beaconLastUpdatedTimestamp = new Timestamp
-                                (tempResult.get(i).getBeaconDetail().getTimeStamp());
-                        long milliseconds = currentTimestamp.getTime() -
-                                beaconLastUpdatedTimestamp.getTime();
-                        int seconds = (int) milliseconds / 1000;
-                        seconds = (seconds % 3600) % 60;
-                        if (seconds >= 10) {
-                            beaconResultEntities.remove(tempResult.get(i));
-                        }
-                    }
-                }
-
-                private void setRefreshData() {
-                    beaconRefreshResultEntities = new ArrayList<>(beaconResultEntities);
-                }
-
-                private void setNewKeys() {
-                    newKeys.clear();
-                    for (int i = 0; i < beaconResultEntities.size(); i++) {
-                        String bluetoothAddress = beaconResultEntities.get(i).getBeaconDetail().
-                                getBluetoothAddress();
-                        String name = beaconResultEntities.get(i).getBeaconDetail().
-                                getBleDataPayload();
-                        newKeys.add(new DifferentBeaconEntity(bluetoothAddress, name));
-                    }
-                }
 
                 private BeaconResultEntity isPresentInBeaconPagerEntities(String macAddress)
                         throws BeaconKeySerializeException {
@@ -362,6 +370,25 @@ public class BeaconHelper<T> {
                     filteredData.addAll(dataMap.get(iBeacon.getBleDataPayload()));
                 }
             };
+
+    private void setRefreshDataForIBeacon() {
+        refreshIBeacons = new ArrayList<>(iBeacons);
+    }
+
+    private void setRefreshData() {
+        beaconRefreshResultEntities = new ArrayList<>(beaconResultEntities);
+    }
+
+    private void setNewKeys() {
+        newKeys.clear();
+        for (int i = 0; i < beaconResultEntities.size(); i++) {
+            String bluetoothAddress = beaconResultEntities.get(i).getBeaconDetail().
+                    getBluetoothAddress();
+            String name = beaconResultEntities.get(i).getBeaconDetail().
+                    getBleDataPayload();
+            newKeys.add(new DifferentBeaconEntity(bluetoothAddress, name));
+        }
+    }
 
     private boolean isStringTypeData() {
         boolean isStringType = false;

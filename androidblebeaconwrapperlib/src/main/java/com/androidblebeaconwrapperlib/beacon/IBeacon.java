@@ -368,6 +368,7 @@ public class IBeacon {
         iBeacon.txPower = (int) scanData[startByte + 24]; // this one is signed
         iBeacon.rssi = rssi;
         iBeacon.bleDataPayload = getPayloadData(scanData);
+        iBeacon.timeStamp = new Date().getTime();
         iBeacon.timezoneString = getDateCurrentTimeZone();
 
         // AirLocate:
